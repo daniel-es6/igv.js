@@ -1155,7 +1155,7 @@ class Browser {
     }
 
     getSelectedTrackViews() {
-        return this.trackViews.filter(trackView => true === trackView.track.selected)
+        return this.trackViews.filter(trackView => trackView && trackView.track && true === trackView.track.selected)
     }
 
     /**
@@ -1169,7 +1169,7 @@ class Browser {
     removeTrackByName(name) {
         const copy = this.trackViews.slice()
         for (let trackView of copy) {
-            if (name === trackView.track.name) {
+            if (trackView && trackView.track && name === trackView.track.name) {
                 this.removeTrack(trackView.track)
             }
         }
@@ -1211,10 +1211,10 @@ class Browser {
 
         for (let trackView of currentTrackViews) {
 
-            if (trackView.track.id !== 'ruler' && trackView.track.id !== 'ideogram') {
+            if (trackView && trackView.track && trackView.track.id !== 'ruler' && trackView.track.id !== 'ideogram') {
                 this.fireEvent('trackremoved', [trackView.track])
                 trackView.dispose()
-            } else {
+            } else if (trackView && trackView.track) {
                 this.trackViews.push(trackView)
             }
         }
@@ -1349,8 +1349,10 @@ class Browser {
                     const inViewFeatures = await Promise.all(trackViews.map(trackView => trackView.getInViewFeatures()))
                     const dataRange = doAutoscale(inViewFeatures.flat())
                     for (const trackView of trackViews) {
-                        trackView.track.dataRange = Object.assign({}, dataRange)
-                        trackView.track.autoscale = false
+                        if (trackView && trackView.track && !trackView.disposed) {
+                            trackView.track.dataRange = Object.assign({}, dataRange)
+                            trackView.track.autoscale = false
+                        }
                     }
                     await Promise.all(trackViews.filter(tv => tv && tv.track && !tv.disposed).map(trackView => trackView.updateViews()))
                 }
@@ -2125,7 +2127,7 @@ class Browser {
 
     removeKeyboardHandler() {
         // console.log("Remove handler")
-        document.addEventListener("keyup", this.keyUpHandler)
+        document.removeEventListener("keyup", this.keyUpHandler)
     }
 
 

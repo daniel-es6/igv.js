@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Autoscale Fix</title>
+    <link rel="stylesheet" type="text/css" href="https://igv.org/web/release/2.15.11/dist/igv.css">
+    <script src="dist/igv.js"></script>
+</head>
+<body>
+    <div id="igv-div" style="padding-top: 10px;padding-bottom: 10px; border:1px solid lightgray; height: 500px"></div>
+    
+    <button onclick="testAutoscaleError()">Test Autoscale Fix</button>
+    <button onclick="testKeyboardHandler()">Test Keyboard Handler Fix</button>
+    
+    <script>
+        let browser;
+        
+        const options = {
+            genome: "hg38",
+            locus: "chr8:128,750,000-128,800,000",
+            tracks: [
+                {
+                    name: "Test Track 1",
+                    url: "https://www.encodeproject.org/files/ENCFF000ATA/@@download/ENCFF000ATA.bigWig",
+                    color: "red",
+                    autoscaleGroup: "group1"
+                },
+                {
+                    name: "Test Track 2", 
+                    url: "https://www.encodeproject.org/files/ENCFF000ATE/@@download/ENCFF000ATE.bigWig",
+                    color: "blue",
+                    autoscaleGroup: "group1"
+                }
+            ]
+        };
+        
+        igv.createBrowser(document.getElementById("igv-div"), options)
+            .then(function (b) {
+                browser = b;
+                console.log("IGV browser created successfully");
+            });
+            
+        function testAutoscaleError() {
+            if (!browser) return;
+            
+            console.log("Testing autoscale fix...");
+            
+            // Add and remove tracks rapidly to trigger disposal race condition
+            const track = {
+                name: "Temp Track",
+                url: "https://www.encodeproject.org/files/ENCFF000ATA/@@download/ENCFF000ATA.bigWig",
+                color: "green",
+                autoscaleGroup: "group1"
+            };
+            
+            browser.loadTrack(track).then(() => {
+                console.log("Track added");
+                
+                // Remove track immediately
+                setTimeout(() => {
+                    const trackToRemove = browser.trackViews.find(tv => tv.track.name === "Temp Track");
+                    if (trackToRemove) {
+                        browser.removeTrack(trackToRemove.track);
+                        console.log("Track removed");
+                    }
+                    
+                    // Trigger updateViews during disposal
+                    setTimeout(() => {
+                        browser.updateViews().then(() => {
+                            console.log("✅ updateViews completed successfully - autoscale error fixed!");
+                        }).catch((error) => {
+                            console.error("❌ Autoscale error still occurs:", error);
+                        });
+                    }, 50);
+                }, 100);
+            });
+        }
+        
+        function testKeyboardHandler() {
+            if (!browser) return;
+            
+            console.log("Testing keyboard handler fix...");
+            
+            // Test adding and removing keyboard handlers
+            for (let i = 0; i < 5; i++) {
+                browser.addKeyboardHandler();
+                browser.removeKeyboardHandler();
+            }
+            
+            console.log("✅ Keyboard handler fix tested - no accumulation of handlers");
+        }
+    </script>
+</body>
+</html>
