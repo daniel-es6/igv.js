@@ -1302,7 +1302,8 @@ class Browser {
 
     async updateViews() {
 
-        const trackViews = this.trackViews
+        // Filter out disposed track views to prevent errors during cleanup
+        const trackViews = this.trackViews.filter(tv => tv && tv.track && !tv.disposed)
 
         this.updateLocusSearchWidget()
 
@@ -1319,7 +1320,9 @@ class Browser {
         // Don't autoscale while dragging.
         if (this.dragObject) {
             for (const trackView of trackViews) {
-                await trackView.updateViews()
+                if (trackView && trackView.track && !trackView.disposed) {
+                    await trackView.updateViews()
+                }
             }
         } else {
             // Group autoscale is done here as it involves multiple tracks.  Individual track autoscale is done in TrackView
@@ -1328,15 +1331,16 @@ class Browser {
 
             // Isolate group autoscale trackViews
             for (const trackView of trackViews) {
-                if (trackView.track.autoscaleGroup) {
+                if (trackView && trackView.track && trackView.track.autoscaleGroup) {
                     const autoscaleGroup = trackView.track.autoscaleGroup
                     if (!groupAutoscaleTrackViews[autoscaleGroup]) {
                         groupAutoscaleTrackViews[autoscaleGroup] = []
                     }
                     groupAutoscaleTrackViews[autoscaleGroup].push(trackView)
-                } else {
+                } else if (trackView && trackView.track) {
                     otherTrackViews.push(trackView)
                 }
+                // Skip trackViews that have been disposed (track is undefined)
             }
 
             // Calculate group autoscale dataRange
@@ -1348,18 +1352,20 @@ class Browser {
                         trackView.track.dataRange = Object.assign({}, dataRange)
                         trackView.track.autoscale = false
                     }
-                    await Promise.all(trackViews.map(trackView => trackView.updateViews()))
+                    await Promise.all(trackViews.filter(tv => tv && tv.track && !tv.disposed).map(trackView => trackView.updateViews()))
                 }
             }
 
-            await Promise.all(otherTrackViews.map(trackView => trackView.updateViews()))
+            await Promise.all(otherTrackViews.filter(tv => tv && tv.track && !tv.disposed).map(trackView => trackView.updateViews()))
         }
 
     }
 
     repaintViews() {
         for (let trackView of this.trackViews) {
-            trackView.repaintViews()
+            if (trackView && trackView.track && !trackView.disposed) {
+                trackView.repaintViews()
+            }
         }
     }
 
@@ -2118,7 +2124,7 @@ class Browser {
     }
 
     removeKeyboardHandler() {
-        console.log("Remove handler")
+        // console.log("Remove handler")
         document.addEventListener("keyup", this.keyUpHandler)
     }
 

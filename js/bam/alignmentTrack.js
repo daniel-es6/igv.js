@@ -137,7 +137,7 @@ class AlignmentTrack extends TrackBase {
     }
 
     dispose() {
-        this.browser.off("locuschage", this._locusChange)
+        this.browser.off("locuschange", this._locusChange)
     }
 
     /**
